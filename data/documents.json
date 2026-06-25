@@ -19,5 +19,26 @@
     "confirmedByUser": true,
     "createdAt": "2026-06-25T07:51:02.499Z",
     "modifiedAt": "2026-06-25T07:51:02.499Z"
+  },
+  {
+    "id": "doc_20260625T075405_w46g5d",
+    "type": "registration",
+    "typeLabel": "Libretto",
+    "status": "archiviata",
+    "plate": "TEST1234",
+    "deviceId": "b482",
+    "assetName": "1.1.BANCOFRANK_GO9LTEB1VOD",
+    "documentDate": "2026-06-01",
+    "dueDate": "",
+    "amount": 0,
+    "documentNumber": "",
+    "issuer": "",
+    "notes": "",
+    "filePath": "documents/libretti/2026-06-25_TEST1234_doc_20260625T075405_w46g5d.jpg",
+    "originalFileName": "images.jpg",
+    "ocrText": "Rr ato = Et ra) |\nH rete 18.11 MERCEes-umns\n[Cam sicmcoanre 5h 0180221 || | (5.2) toi cacs movvesay\nEre cm | ey\nee | | 00 eusse\n(a ma) | im mereasniosisni\nTe ——| Eh GRA\ne—— hal\nty TOR |: Dut R ge\ni mn\nCL p————\nmm {ot orn sn 1 Cic\nEo po, >\nI 1 pnzomsagssnios\n| w 2G wa\ni peel Ed\n1 BE hy\n| Be chs man\n| | a\nFw tt\n| sì 8\n£1 sua Eh ego SS\n|. = Bi) sibs G\n[ng [am ==\n| Gomis pi :\n[SE BEE\n| RAPPORTO POTENEA/ZARA = 81,197 SN/2O\n| LI\nre e da\nPSE SR | i\nSERIE i\nSil ume misoni\nA ee\npel\n| ERE |\n| sen\nral BS\nCB\n",
+    "confirmedByUser": true,
+    "createdAt": "2026-06-25T07:54:05.806Z",
+    "modifiedAt": "2026-06-25T07:54:05.806Z"
   }
 ]
