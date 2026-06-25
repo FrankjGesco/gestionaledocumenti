@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Fleet Documents & Fines Manager</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">MyGeotab Add-In</div>
+        <h1>Fleet Documents & Fines Manager</h1>
+        <p class="subtitle">Archivio documenti e multe associato agli asset Geotab. OCR locale, match targa, conferma manuale e salvataggio su GitHub per MVP/test.</p>
+      </div>
+      <div class="version">v0.2.0</div>
+    </header>
+
+    <section id="localWarning" class="notice warning hidden">
+      Pagina aperta fuori da MyGeotab: il match con gli asset reali funziona solo come Add-In dentro MyGeotab.
+    </section>
+
+    <section class="panel setup-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Configurazione GitHub test</h2>
+          <p>Token usato solo in memoria. Non inserirlo nel codice del repository.</p>
+        </div>
+      </div>
+      <div class="grid form-grid">
+        <label class="field"><span>Owner GitHub</span><input id="ghOwner" placeholder="es. frankjgesco"></label>
+        <label class="field"><span>Repository</span><input id="ghRepo" placeholder="es. geotab-doc-manager"></label>
+        <label class="field"><span>Branch</span><input id="ghBranch" value="main"></label>
+        <label class="field"><span>Fine-grained token</span><input id="ghToken" type="password" placeholder="incolla token solo per test"></label>
+      </div>
+      <div class="toolbar-mini">
+        <button id="saveConfig" class="btn">Memorizza configurazione locale</button>
+        <button id="loadArchive" class="btn primary">Carica archivio</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card"><div class="summary-label">Documenti</div><div id="docCount" class="summary-number">-</div><div class="summary-help">Totali archiviati</div></article>
+      <article class="summary-card"><div class="summary-label">Multe</div><div id="fineCount" class="summary-number">-</div><div class="summary-help">Verbali caricati</div></article>
+      <article class="summary-card"><div class="summary-label">Da pagare</div><div id="openFineCount" class="summary-number">-</div><div class="summary-help">Multe aperte</div></article>
+      <article class="summary-card"><div class="summary-label">Importo aperto</div><div id="openAmount" class="summary-number">-</div><div class="summary-help">Somma multe da gestire</div></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Nuovo documento</h2>
+          <p>Carica PDF/immagine, l’OCR prova a leggere targa, data e importo. Prima del salvataggio devi confermare.</p>
+        </div>
+      </div>
+      <div class="grid form-grid">
+        <label class="field"><span>Tipo documento</span>
+          <select id="docType">
+            <option value="fine">Multa / verbale</option>
+            <option value="registration">Libretto</option>
+            <option value="insurance">Assicurazione</option>
+            <option value="leasing">Leasing / noleggio</option>
+            <option value="inspection">Revisione</option>
+            <option value="fuel_card">Carta carburante</option>
+            <option value="other">Altro</option>
+          </select>
+        </label>
+        <label class="field"><span>File</span><input id="fileInput" type="file" accept="application/pdf,image/*"></label>
+        <label class="field"><span>Stato</span>
+          <select id="statusInput">
+            <option value="da_verificare">Da verificare</option>
+            <option value="da_pagare">Da pagare</option>
+            <option value="pagata">Pagata</option>
+            <option value="contestata">Contestata</option>
+            <option value="archiviata">Archiviata</option>
+          </select>
+        </label>
+      </div>
+      <div class="toolbar-mini">
+        <button id="runOcr" class="btn primary">Leggi OCR</button>
+        <button id="clearForm" class="btn">Pulisci</button>
+      </div>
+
+      <div id="ocrStatus" class="status">Pronto.</div>
+
+      <div class="grid form-grid extracted-grid">
+        <label class="field"><span>Targa</span><input id="plateInput" placeholder="AB123CD"></label>
+        <label class="field"><span>Asset suggerito</span><select id="assetSelect"><option value="">Nessun asset selezionato</option></select></label>
+        <label class="field"><span>Data documento</span><input id="dateInput" type="date"></label>
+        <label class="field"><span>Scadenza</span><input id="dueDateInput" type="date"></label>
+        <label class="field"><span>Importo</span><input id="amountInput" type="number" step="0.01" placeholder="0.00"></label>
+        <label class="field"><span>Numero verbale</span><input id="numberInput"></label>
+        <label class="field wide"><span>Ente / fornitore</span><input id="issuerInput"></label>
+        <label class="field wide"><span>Note</span><textarea id="notesInput" rows="2"></textarea></label>
+      </div>
+
+      <div class="ocr-box">
+        <h3>Testo OCR</h3>
+        <pre id="ocrText">Nessun OCR eseguito.</pre>
+      </div>
+
+      <div class="confirm-box">
+        <label><input id="confirmInput" type="checkbox"> Confermo che dati estratti, asset associato e documento sono corretti.</label>
+        <button id="saveDocument" class="btn primary" disabled>Salva documento su GitHub</button>
+      </div>
+    </section>
+
+    <section class="tabs">
+      <button class="tab active" data-tab="archive">Archivio</button>
+      <button class="tab" data-tab="assets">Vista asset</button>
+    </section>
+
+    <section id="tab-archive" class="tab-panel active">
+      <div class="panel">
+        <div class="panel-header">
+          <div><h2>Archivio documenti</h2><p>Un solo indice <code>data/documents.json</code>. Ogni nuovo documento viene aggiunto senza cancellare i precedenti.</p></div>
+          <label class="field search-field"><span>Cerca</span><input id="searchInput" placeholder="targa, asset, ente, stato..."></label>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Asset</th><th>Targa</th><th>Data</th><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Documento</th></tr></thead><tbody id="archiveTable"><tr><td colspan="8"><div class="empty-state">Carica archivio.</div></td></tr></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="tab-assets" class="tab-panel">
+      <div class="panel">
+        <div class="panel-header"><div><h2>Documenti per asset</h2><p>Raggruppamento dei documenti collegati ad asset/targa.</p></div></div>
+        <div id="assetCards" class="asset-cards"><div class="empty-state">Carica archivio.</div></div>
+      </div>
+    </section>
+
+    <footer class="footer">MVP test: storage GitHub, OCR lato browser, conferma manuale obbligatoria. Per produzione usare storage/identity aziendale.</footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

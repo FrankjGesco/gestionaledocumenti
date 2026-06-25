@@ -1,0 +1,17 @@
+{
+  "name": "Fleet Documents & Fines Manager",
+  "supportEmail": "forlasifrancesco@yahoo.it",
+  "version": "0.2.0",
+  "items": [
+    {
+      "url": "https://YOUR_GITHUB_USER.github.io/YOUR_REPO/index.html",
+      "path": "EngineMaintenanceLink/",
+      "category": "DiagnosticsId",
+      "menuName": {
+        "en": "Documents & Fines",
+        "it": "Documenti & Multe"
+      }
+    }
+  ],
+  "files": {}
+}
