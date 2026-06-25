@@ -9,6 +9,7 @@
   var currentFile = null;
   var currentOcrText = "";
   var ghIndexSha = null;
+  var editingDocumentId = null;
 
   function byId(id){ return document.getElementById(id); }
   function esc(v){ return String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;"); }
@@ -53,6 +54,13 @@
   }
   function renderAssetSelect(selectedId){
     var sel = byId("assetSelect");
+    sel.innerHTML = '<option value="">Nessun asset selezionato</option>' + assets.map(function(a){
+      var id = entityId(a); return '<option value="'+esc(id)+'" '+(id===selectedId?'selected':'')+'>'+esc(nameOf(a))+' — '+esc(plateOf(a) || "senza targa")+'</option>';
+    }).join("");
+  }
+  function renderAssetOptions(selectId, selectedId){
+    var sel = byId(selectId);
+    if(!sel) return;
     sel.innerHTML = '<option value="">Nessun asset selezionato</option>' + assets.map(function(a){
       var id = entityId(a); return '<option value="'+esc(id)+'" '+(id===selectedId?'selected':'')+'>'+esc(nameOf(a))+' — '+esc(plateOf(a) || "senza targa")+'</option>';
     }).join("");
@@ -109,6 +117,11 @@
   }
 
   function typeLabel(t){ return ({fine:"Multa",registration:"Libretto",insurance:"Assicurazione",leasing:"Leasing",inspection:"Revisione",fuel_card:"Carta carburante",other:"Altro"})[t] || t || "Documento"; }
+  function statusLabel(type, value){
+    var cfg = fieldConfig(type);
+    var found = (cfg.statuses || []).find(function(s){ return s[0] === value; });
+    return found ? found[1] : (value || "-");
+  }
   function folderForType(t){ return ({fine:"multe",registration:"libretti",insurance:"assicurazioni",leasing:"leasing",inspection:"revisioni",fuel_card:"carte-carburante",other:"altro"})[t] || "altro"; }
   function fieldConfig(t){
     var cfg = {
@@ -318,12 +331,80 @@
     var q = (byId("searchInput").value || "").toLowerCase();
     var rows = documents.filter(function(d){ return !q || JSON.stringify(d).toLowerCase().indexOf(q) !== -1; }).slice().sort(function(a,b){ return String(b.createdAt||"").localeCompare(String(a.createdAt||"")); });
     var tbody=byId("archiveTable");
-    if(!rows.length){ tbody.innerHTML='<tr><td colspan="8"><div class="empty-state">Nessun documento trovato.</div></td></tr>'; return; }
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="9"><div class="empty-state">Nessun documento trovato.</div></td></tr>'; return; }
     tbody.innerHTML = rows.map(function(d){
       var link = d.filePath ? '<a class="doc-link" href="'+esc(rawUrl(d.filePath))+'" target="_blank" rel="noopener">Apri</a>' : '-';
-      return '<tr><td><span class="pill '+esc(d.type)+'">'+esc(typeLabel(d.type))+'</span></td><td>'+esc(d.assetName||'-')+'</td><td>'+esc(d.plate||'-')+'</td><td>'+esc(d.documentDate||'-')+'</td><td>'+esc(d.dueDate||'-')+'</td><td>'+esc(d.amount != null ? Number(d.amount).toLocaleString("it-IT",{style:"currency",currency:"EUR"}) : '-')+'</td><td>'+esc(d.status||'-')+'</td><td>'+link+'</td></tr>';
+      var amount = d.amount != null ? Number(d.amount).toLocaleString("it-IT",{style:"currency",currency:"EUR"}) : '-';
+      return '<tr><td><span class="pill '+esc(d.type)+'">'+esc(typeLabel(d.type))+'</span></td><td>'+esc(d.assetName||'-')+'</td><td>'+esc(d.plate||'-')+'</td><td>'+esc(d.documentDate||'-')+'</td><td>'+esc(d.dueDate||'-')+'</td><td>'+esc(amount)+'</td><td>'+esc(statusLabel(d.type, d.status))+'</td><td>'+link+'</td><td><button class="btn small js-edit-doc" data-id="'+esc(d.id)+'">Modifica</button></td></tr>';
     }).join("");
   }
+
+  function openEditDocument(id){
+    var d = documents.find(function(x){ return x.id === id; });
+    if(!d){ alert("Documento non trovato in archivio."); return; }
+    editingDocumentId = id;
+    byId("editId").value = id;
+    byId("editTypeLabel").value = typeLabel(d.type);
+    byId("editPlateInput").value = d.plate || "";
+    renderAssetOptions("editAssetSelect", d.deviceId || "");
+    var cfg = fieldConfig(d.type);
+    byId("editStatusInput").innerHTML = (cfg.statuses || []).map(function(s){ return '<option value="'+esc(s[0])+'">'+esc(s[1])+'</option>'; }).join("");
+    byId("editStatusInput").value = d.status || ((cfg.statuses && cfg.statuses[0] && cfg.statuses[0][0]) || "");
+    byId("editDateInput").value = d.documentDate || "";
+    byId("editDueDateInput").value = d.dueDate || "";
+    byId("editAmountInput").value = d.amount != null ? d.amount : "";
+    byId("editNumberInput").value = d.documentNumber || d.policyNumber || "";
+    byId("editIssuerInput").value = d.issuer || d.company || "";
+    byId("editNotesInput").value = d.notes || "";
+    byId("editPanel").classList.remove("hidden");
+    byId("editPanel").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  function closeEditDocument(){
+    editingDocumentId = null;
+    byId("editPanel").classList.add("hidden");
+  }
+
+  function findAssetById(id){
+    return assets.find(function(a){ return entityId(a) === id; }) || null;
+  }
+
+  async function saveEditDocument(){
+    var id = byId("editId").value || editingDocumentId;
+    if(!id){ alert("Nessun documento selezionato."); return; }
+    try{
+      setStatus("Aggiorno archivio su GitHub...");
+      var latest = await ghGetFile("data/documents.json");
+      var list = latest.exists && latest.content ? JSON.parse(latest.content) : documents.slice();
+      var idx = list.findIndex(function(d){ return d.id === id; });
+      if(idx < 0) throw new Error("Documento non trovato nel file documents.json aggiornato.");
+      var d = list[idx];
+      var asset = findAssetById(byId("editAssetSelect").value);
+      d.status = byId("editStatusInput").value;
+      d.plate = norm(byId("editPlateInput").value || (asset ? plateOf(asset) : d.plate));
+      d.deviceId = asset ? entityId(asset) : byId("editAssetSelect").value || "";
+      d.assetName = asset ? nameOf(asset) : d.assetName || "";
+      d.documentDate = byId("editDateInput").value || "";
+      d.dueDate = byId("editDueDateInput").value || "";
+      d.amount = byId("editAmountInput").value ? Number(byId("editAmountInput").value) : null;
+      d.documentNumber = byId("editNumberInput").value.trim();
+      d.issuer = byId("editIssuerInput").value.trim();
+      if(d.type === "insurance"){
+        d.company = d.issuer;
+        d.policyNumber = d.documentNumber;
+      }
+      d.notes = byId("editNotesInput").value.trim();
+      d.modifiedAt = new Date().toISOString();
+      list[idx] = d;
+      var res = await ghPutFile("data/documents.json", JSON.stringify(list,null,2)+"\n", "Update document record "+id, latest.sha || ghIndexSha);
+      ghIndexSha = res.content && res.content.sha || null;
+      documents = list;
+      renderAll();
+      closeEditDocument();
+      setStatus("Archivio aggiornato. Documento modificato: "+id+".");
+    }catch(e){ console.error(e); alert(e.message); setStatus("Modifica non riuscita: "+e.message); }
+  }
+
   function renderAssetCards(){
     var groups = {};
     documents.forEach(function(d){ var key = d.deviceId || d.plate || "non_associati"; if(!groups[key]) groups[key]=[]; groups[key].push(d); });
@@ -348,6 +429,10 @@
     byId("confirmInput").addEventListener("change", function(){ byId("saveDocument").disabled = !this.checked; });
     byId("plateInput").addEventListener("input", function(){ var a=matchAssetByPlate(this.value); if(a) renderAssetSelect(entityId(a)); });
     byId("searchInput").addEventListener("input", renderArchive);
+    byId("saveEdit").addEventListener("click", saveEditDocument);
+    byId("cancelEdit").addEventListener("click", closeEditDocument);
+    byId("editPlateInput").addEventListener("input", function(){ var a=matchAssetByPlate(this.value); if(a) renderAssetOptions("editAssetSelect", entityId(a)); });
+    document.body.addEventListener("click", function(event){ var t = event.target; if(t && t.classList.contains("js-edit-doc")){ openEditDocument(t.getAttribute("data-id")); } });
     document.querySelectorAll(".tab").forEach(function(tab){ tab.addEventListener("click", function(){ document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")}); tab.classList.add("active"); document.querySelectorAll(".tab-panel").forEach(function(p){p.classList.remove("active")}); byId("tab-"+tab.getAttribute("data-tab")).classList.add("active"); }); });
   }
 

@@ -15,7 +15,7 @@
         <h1>Fleet Document Manager</h1>
         <p class="subtitle">Archivio documentale associato agli asset Geotab. Form dinamico per multe, libretti, assicurazioni e altri documenti, OCR locale, conferma manuale e salvataggio su GitHub per MVP/test.</p>
       </div>
-      <div class="version">v0.3.0</div>
+      <div class="version">v0.4.0</div>
     </header>
 
     <section id="localWarning" class="notice warning hidden">
@@ -112,7 +112,34 @@
           <div><h2>Archivio documenti</h2><p>Un solo indice <code>data/documents.json</code>. Ogni nuovo documento viene aggiunto senza cancellare i precedenti.</p></div>
           <label class="field search-field"><span>Cerca</span><input id="searchInput" placeholder="targa, asset, ente, stato..."></label>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Asset</th><th>Targa</th><th>Data</th><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Documento</th></tr></thead><tbody id="archiveTable"><tr><td colspan="8"><div class="empty-state">Carica archivio.</div></td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Asset</th><th>Targa</th><th>Data</th><th>Scadenza</th><th>Importo</th><th>Stato</th><th>Documento</th><th>Azioni</th></tr></thead><tbody id="archiveTable"><tr><td colspan="9"><div class="empty-state">Carica archivio.</div></td></tr></tbody></table></div>
+      </div>
+    </section>
+
+
+    <section id="editPanel" class="panel edit-panel hidden">
+      <div class="panel-header">
+        <div>
+          <h2>Modifica documento archiviato</h2>
+          <p>Aggiorna stato e metadati senza ricaricare il PDF. Il file resta invariato, viene aggiornato solo <code>data/documents.json</code>.</p>
+        </div>
+      </div>
+      <input id="editId" type="hidden">
+      <div class="grid form-grid extracted-grid">
+        <label class="field"><span>Tipo</span><input id="editTypeLabel" disabled></label>
+        <label class="field"><span>Targa</span><input id="editPlateInput"></label>
+        <label class="field"><span>Asset</span><select id="editAssetSelect"><option value="">Nessun asset selezionato</option></select></label>
+        <label class="field"><span>Stato</span><select id="editStatusInput"></select></label>
+        <label class="field"><span>Data documento</span><input id="editDateInput" type="date"></label>
+        <label class="field"><span>Scadenza</span><input id="editDueDateInput" type="date"></label>
+        <label class="field"><span>Importo</span><input id="editAmountInput" type="number" step="0.01"></label>
+        <label class="field"><span>Numero documento</span><input id="editNumberInput"></label>
+        <label class="field wide"><span>Ente / compagnia / fornitore</span><input id="editIssuerInput"></label>
+        <label class="field wide"><span>Note</span><textarea id="editNotesInput" rows="2"></textarea></label>
+      </div>
+      <div class="toolbar-mini">
+        <button id="saveEdit" class="btn primary">Salva modifiche archivio</button>
+        <button id="cancelEdit" class="btn">Annulla</button>
       </div>
     </section>
 
