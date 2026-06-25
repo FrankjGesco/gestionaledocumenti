@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Fleet Documents & Fines Manager</title>
+  <title>Fleet Document Manager</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -12,10 +12,10 @@
     <header class="topbar">
       <div>
         <div class="eyebrow">MyGeotab Add-In</div>
-        <h1>Fleet Documents & Fines Manager</h1>
-        <p class="subtitle">Archivio documenti e multe associato agli asset Geotab. OCR locale, match targa, conferma manuale e salvataggio su GitHub per MVP/test.</p>
+        <h1>Fleet Document Manager</h1>
+        <p class="subtitle">Archivio documentale associato agli asset Geotab. Form dinamico per multe, libretti, assicurazioni e altri documenti, OCR locale, conferma manuale e salvataggio su GitHub per MVP/test.</p>
       </div>
-      <div class="version">v0.2.0</div>
+      <div class="version">v0.3.0</div>
     </header>
 
     <section id="localWarning" class="notice warning hidden">
@@ -68,14 +68,8 @@
           </select>
         </label>
         <label class="field"><span>File</span><input id="fileInput" type="file" accept="application/pdf,image/*"></label>
-        <label class="field"><span>Stato</span>
-          <select id="statusInput">
-            <option value="da_verificare">Da verificare</option>
-            <option value="da_pagare">Da pagare</option>
-            <option value="pagata">Pagata</option>
-            <option value="contestata">Contestata</option>
-            <option value="archiviata">Archiviata</option>
-          </select>
+        <label id="statusField" class="field"><span id="statusLabel">Stato</span>
+          <select id="statusInput"></select>
         </label>
       </div>
       <div class="toolbar-mini">
@@ -86,14 +80,14 @@
       <div id="ocrStatus" class="status">Pronto.</div>
 
       <div class="grid form-grid extracted-grid">
-        <label class="field"><span>Targa</span><input id="plateInput" placeholder="AB123CD"></label>
-        <label class="field"><span>Asset suggerito</span><select id="assetSelect"><option value="">Nessun asset selezionato</option></select></label>
-        <label class="field"><span>Data documento</span><input id="dateInput" type="date"></label>
-        <label class="field"><span>Scadenza</span><input id="dueDateInput" type="date"></label>
-        <label class="field"><span>Importo</span><input id="amountInput" type="number" step="0.01" placeholder="0.00"></label>
-        <label class="field"><span>Numero verbale</span><input id="numberInput"></label>
-        <label class="field wide"><span>Ente / fornitore</span><input id="issuerInput"></label>
-        <label class="field wide"><span>Note</span><textarea id="notesInput" rows="2"></textarea></label>
+        <label id="plateField" class="field"><span id="plateLabel">Targa</span><input id="plateInput" placeholder="AB123CD"></label>
+        <label id="assetField" class="field"><span id="assetLabel">Asset suggerito</span><select id="assetSelect"><option value="">Nessun asset selezionato</option></select></label>
+        <label id="dateField" class="field"><span id="dateLabel">Data documento</span><input id="dateInput" type="date"></label>
+        <label id="dueDateField" class="field"><span id="dueDateLabel">Scadenza</span><input id="dueDateInput" type="date"></label>
+        <label id="amountField" class="field"><span id="amountLabel">Importo</span><input id="amountInput" type="number" step="0.01" placeholder="0.00"></label>
+        <label id="numberField" class="field"><span id="numberLabel">Numero verbale</span><input id="numberInput"></label>
+        <label id="issuerField" class="field wide"><span id="issuerLabel">Ente / fornitore</span><input id="issuerInput"></label>
+        <label id="notesField" class="field wide"><span id="notesLabel">Note</span><textarea id="notesInput" rows="2"></textarea></label>
       </div>
 
       <div class="ocr-box">

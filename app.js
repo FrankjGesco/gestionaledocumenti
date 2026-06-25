@@ -110,6 +110,57 @@
 
   function typeLabel(t){ return ({fine:"Multa",registration:"Libretto",insurance:"Assicurazione",leasing:"Leasing",inspection:"Revisione",fuel_card:"Carta carburante",other:"Altro"})[t] || t || "Documento"; }
   function folderForType(t){ return ({fine:"multe",registration:"libretti",insurance:"assicurazioni",leasing:"leasing",inspection:"revisioni",fuel_card:"carte-carburante",other:"altro"})[t] || "altro"; }
+  function fieldConfig(t){
+    var cfg = {
+      fine: {
+        labels:{date:"Data infrazione",due:"Scadenza pagamento",amount:"Importo multa",number:"Numero verbale",issuer:"Ente emittente",status:"Stato multa"},
+        show:{plate:true,asset:true,date:true,due:true,amount:true,number:true,issuer:true,notes:true,status:true},
+        statuses:[["da_verificare","Da verificare"],["da_pagare","Da pagare"],["pagata","Pagata"],["contestata","Contestata"],["archiviata","Archiviata"]]
+      },
+      registration: {
+        labels:{date:"Data immatricolazione",number:"Numero libretto",issuer:"Ufficio / fonte",status:"Stato documento"},
+        show:{plate:true,asset:true,date:true,due:false,amount:false,number:true,issuer:false,notes:true,status:true},
+        statuses:[["valido","Valido"],["da_verificare","Da verificare"],["archiviato","Archiviato"]]
+      },
+      insurance: {
+        labels:{date:"Decorrenza",due:"Scadenza polizza",amount:"Premio / importo",number:"Numero polizza",issuer:"Compagnia assicurativa",status:"Stato polizza"},
+        show:{plate:true,asset:true,date:true,due:true,amount:true,number:true,issuer:true,notes:true,status:true},
+        statuses:[["attiva","Attiva"],["in_scadenza","In scadenza"],["scaduta","Scaduta"],["da_verificare","Da verificare"],["archiviata","Archiviata"]]
+      },
+      leasing: {
+        labels:{date:"Decorrenza",due:"Scadenza contratto",amount:"Canone / importo",number:"Numero contratto",issuer:"Società leasing / noleggio",status:"Stato contratto"},
+        show:{plate:true,asset:true,date:true,due:true,amount:true,number:true,issuer:true,notes:true,status:true},
+        statuses:[["attivo","Attivo"],["in_scadenza","In scadenza"],["chiuso","Chiuso"],["da_verificare","Da verificare"],["archiviato","Archiviato"]]
+      },
+      inspection: {
+        labels:{date:"Data revisione",due:"Prossima scadenza",number:"Numero pratica",issuer:"Centro revisione",status:"Stato revisione"},
+        show:{plate:true,asset:true,date:true,due:true,amount:false,number:true,issuer:true,notes:true,status:true},
+        statuses:[["regolare","Regolare"],["in_scadenza","In scadenza"],["scaduta","Scaduta"],["da_verificare","Da verificare"],["archiviata","Archiviata"]]
+      },
+      fuel_card: {
+        labels:{date:"Data emissione",due:"Scadenza carta",number:"Numero carta",issuer:"Emittente",status:"Stato carta"},
+        show:{plate:true,asset:true,date:true,due:true,amount:false,number:true,issuer:true,notes:true,status:true},
+        statuses:[["attiva","Attiva"],["bloccata","Bloccata"],["scaduta","Scaduta"],["da_verificare","Da verificare"],["archiviata","Archiviata"]]
+      },
+      other: {
+        labels:{date:"Data documento",due:"Scadenza",amount:"Importo",number:"Numero documento",issuer:"Ente / fornitore",status:"Stato documento"},
+        show:{plate:true,asset:true,date:true,due:true,amount:true,number:true,issuer:true,notes:true,status:true},
+        statuses:[["da_verificare","Da verificare"],["valido","Valido"],["archiviato","Archiviato"]]
+      }
+    };
+    return cfg[t] || cfg.other;
+  }
+  function setVisible(id, visible){ var el = byId(id); if(el) el.classList.toggle("hidden", !visible); }
+  function applyDocumentType(){
+    var t = byId("docType").value;
+    var cfg = fieldConfig(t);
+    var map = {date:"dateLabel", due:"dueDateLabel", amount:"amountLabel", number:"numberLabel", issuer:"issuerLabel", status:"statusLabel"};
+    Object.keys(map).forEach(function(k){ if(cfg.labels[k] && byId(map[k])) byId(map[k]).textContent = cfg.labels[k]; });
+    setVisible("plateField", cfg.show.plate); setVisible("assetField", cfg.show.asset); setVisible("dateField", cfg.show.date); setVisible("dueDateField", cfg.show.due); setVisible("amountField", cfg.show.amount); setVisible("numberField", cfg.show.number); setVisible("issuerField", cfg.show.issuer); setVisible("notesField", cfg.show.notes); setVisible("statusField", cfg.show.status);
+    var prev = byId("statusInput").value;
+    byId("statusInput").innerHTML = cfg.statuses.map(function(s){ return '<option value="'+esc(s[0])+'">'+esc(s[1])+'</option>'; }).join("");
+    if(cfg.statuses.some(function(s){ return s[0] === prev; })) byId("statusInput").value = prev;
+  }
   function selectedAsset(){ var id = byId("assetSelect").value; return assets.find(function(a){ return entityId(a) === id; }) || null; }
   function extensionOf(file){ var n=file && file.name || "document.pdf"; var m=n.match(/\.([a-zA-Z0-9]+)$/); return (m ? m[1] : "pdf").toLowerCase(); }
 
@@ -127,11 +178,23 @@
     }catch(e){ console.error(e); setStatus("OCR non riuscito. Puoi compilare manualmente i campi."); byId("ocrText").textContent = "Errore OCR: "+e.message; }
   }
   function applyOcrSuggestions(text){
+    var t = byId("docType").value;
     var plate = guessPlate(text); if(plate) byId("plateInput").value = plate;
-    var amount = guessAmount(text); if(amount) byId("amountInput").value = amount;
     var date = guessDate(text); if(date) byId("dateInput").value = date;
-    var due = guessDueDate(text); if(due) byId("dueDateInput").value = due;
-    var num = guessNumber(text); if(num) byId("numberInput").value = num;
+
+    if(["fine","insurance","leasing","other"].indexOf(t) !== -1){
+      var amount = guessAmount(text); if(amount) byId("amountInput").value = amount;
+    }
+    if(["fine","insurance","leasing","inspection","fuel_card","registration","other"].indexOf(t) !== -1){
+      var num = guessNumberByType(text, t); if(num) byId("numberInput").value = num;
+    }
+    if(["fine","insurance","leasing","inspection","fuel_card","other"].indexOf(t) !== -1){
+      var due = guessDueDateByType(text, t); if(due) byId("dueDateInput").value = due;
+    }
+    if(["fine","insurance","leasing","inspection","fuel_card","other"].indexOf(t) !== -1){
+      var issuer = guessIssuerByType(text, t); if(issuer) byId("issuerInput").value = issuer;
+    }
+
     var asset = matchAssetByPlate(byId("plateInput").value); if(asset) renderAssetSelect(entityId(asset));
   }
   function guessPlate(t){ var m = String(t||"").toUpperCase().match(/\b[A-Z]{2}\s?[0-9]{3}\s?[A-Z]{2}\b/); return m ? norm(m[0]) : ""; }
@@ -140,6 +203,49 @@
   function guessDate(t){ var m=String(t||"").match(/\b([0-3]?\d)[\/\-.]([01]?\d)[\/\-.]((?:20)?\d{2})\b/); return m ? toIsoDate(m[1],m[2],m[3]) : ""; }
   function guessDueDate(t){ var lower=String(t||"").toLowerCase(); var idx=lower.search(/scadenza|pagamento entro|entro il/); if(idx<0) return ""; return guessDate(lower.slice(idx, idx+120)); }
   function guessNumber(t){ var m=String(t||"").match(/(?:verbale|n\.|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i); return m ? m[1] : ""; }
+  function guessNumberByType(t, type){
+    var text = String(t||"");
+    var patterns = {
+      fine: /(?:verbale|accertamento|n\.|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i,
+      insurance: /(?:polizza|contratto|n\.|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i,
+      leasing: /(?:contratto|noleggio|leasing|n\.|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i,
+      registration: /(?:libretto|carta di circolazione|telaio|vin)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i,
+      inspection: /(?:revisione|pratica|n\.|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i,
+      fuel_card: /(?:carta|card|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i
+    };
+    var m = text.match(patterns[type] || /(?:documento|n\.|numero)\s*[:#-]?\s*([A-Z0-9\/-]{4,})/i);
+    return m ? m[1] : guessNumber(text);
+  }
+  function guessDueDateByType(t, type){
+    var lower=String(t||"").toLowerCase();
+    var keywords = {
+      fine:/scadenza|pagamento entro|entro il|termine pagamento/,
+      insurance:/scadenza|scade|valid[ao] fino|copertura fino/,
+      leasing:/scadenza|fine contratto|termine contratto|fino al/,
+      inspection:/prossima revisione|scadenza|revisione entro/,
+      fuel_card:/scadenza|valida fino|valid thru/,
+      other:/scadenza|fino al|entro il/
+    };
+    var re = keywords[type] || keywords.other;
+    var idx=lower.search(re); if(idx<0) return ""; return guessDate(lower.slice(idx, idx+160));
+  }
+  function guessIssuerByType(t, type){
+    var lines = String(t||"").split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean);
+    if(!lines.length) return "";
+    if(type === "insurance"){
+      var l = lines.find(function(x){ return /assicur|insurance|groupama|generali|allianz|unipol|reale|axa|zurich|vittoria|cattolica/i.test(x); });
+      return l ? l.slice(0,80) : "";
+    }
+    if(type === "fine"){
+      var l2 = lines.find(function(x){ return /comune|polizia|municipale|prefettura|carabinieri|verbale/i.test(x); });
+      return l2 ? l2.slice(0,80) : "";
+    }
+    if(type === "leasing"){
+      var l3 = lines.find(function(x){ return /leasing|noleggio|lease|rent|arval|leaseplan|ald|leasys/i.test(x); });
+      return l3 ? l3.slice(0,80) : "";
+    }
+    return "";
+  }
 
   async function saveDocument(){
     currentFile = byId("fileInput").files[0];
@@ -166,6 +272,8 @@
       amount:byId("amountInput").value ? Number(byId("amountInput").value) : null,
       documentNumber:byId("numberInput").value.trim(),
       issuer:byId("issuerInput").value.trim(),
+      company:type === "insurance" ? byId("issuerInput").value.trim() : "",
+      policyNumber:type === "insurance" ? byId("numberInput").value.trim() : "",
       notes:byId("notesInput").value.trim(),
       filePath:filePath,
       originalFileName:currentFile.name,
@@ -193,7 +301,7 @@
   function clearForm(clearFile){
     if(clearFile !== false) byId("fileInput").value = "";
     ["plateInput","dateInput","dueDateInput","amountInput","numberInput","issuerInput","notesInput"].forEach(function(id){ byId(id).value=""; });
-    byId("confirmInput").checked=false; byId("saveDocument").disabled=true; byId("ocrText").textContent="Nessun OCR eseguito."; currentOcrText=""; currentFile=null; renderAssetSelect();
+    byId("confirmInput").checked=false; byId("saveDocument").disabled=true; byId("ocrText").textContent="Nessun OCR eseguito."; currentOcrText=""; currentFile=null; renderAssetSelect(); applyDocumentType();
   }
 
   function renderAll(){ renderSummary(); renderArchive(); renderAssetCards(); }
@@ -232,6 +340,8 @@
     loadLocalCfg();
     byId("saveConfig").addEventListener("click", saveLocalCfg);
     byId("loadArchive").addEventListener("click", function(){ loadArchive().catch(function(e){ alert(e.message); setStatus(e.message); }); });
+    byId("docType").addEventListener("change", applyDocumentType);
+    applyDocumentType();
     byId("runOcr").addEventListener("click", runOcr);
     byId("clearForm").addEventListener("click", function(){ clearForm(true); });
     byId("saveDocument").addEventListener("click", saveDocument);
